@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up{% endblock %}
+
+{% block content %}
+    <h2 style="text-align: center; color: #2c3e50;">Sign Up</h2>
+
+    {% if error %}
+        <p style="color: red; text-align: center;">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" style="max-width: 400px; margin: auto; padding: 20px; background-color: #f8f9fa; 
+        border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
+        
+        <label style="font-weight: bold; color: #34495e;">Full Name:</label>
+        <input type="text" name="full_name" required style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;">
+
+        <label style="font-weight: bold; color: #34495e;">Age:</label>
+        <input type="number" name="age" required style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;">
+
+        <label style="font-weight: bold; color: #34495e;">Medical History (optional):</label>
+        <textarea name="medical_history" rows="3" placeholder="Enter any relevant medical history..." 
+            style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;"></textarea>
+
+        <label style="font-weight: bold; color: #34495e;">Username:</label>
+        <input type="text" name="username" required style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;">
+
+        <label style="font-weight: bold; color: #34495e;">Password:</label>
+        <input type="password" name="password" required style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;">
+
+        <button type="submit" style="width: 100%; padding: 10px; background-color: #3498db; color: white; 
+            border: none; border-radius: 5px; font-size: 16px; cursor: pointer;">Sign Up</button>
+    </form>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Lung Disease Prediction{% endblock %}
+
+{% block content %}
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-top: 20px;
+        }
+        h2 {
+            color: #27ae60;
+        }
+        p {
+            font-size: 18px;
+            color: #555;
+        }
+        form {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            display: inline-block;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        input[type="file"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        button {
+            background-color: #333;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #27ae60;
+        }
+    </style>
+
+    <h1>Welcome to the Lung Disease Prediction System</h1>
+
+    {% if prediction %}
+        <h2>Prediction: {{ prediction }}</h2>
+        <p>Confidence: {{ confidence | round(2) }}%</p>
+    {% endif %}
+
+    <form action="{{ url_for('predict') }}" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" required>
+        <button type="submit">Upload & Predict</button>
+    </form>
+
+    {% if disease_info %}
+        <h3>More about {{ prediction }}:</h3>
+        <p>{{ disease_info }}</p>
+    {% endif %}
+
+{% endblock %}

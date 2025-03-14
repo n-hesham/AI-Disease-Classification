@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Prediction History{% endblock %}
+
+{% block content %}
+    <style>
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #333;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+    </style>
+
+    <h2>Your Prediction History</h2>
+
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Image</th>
+            <th>Prediction</th>
+            <th>Confidence</th>
+            <th>Timestamp</th>
+        </tr>
+        {% for record in predictions %}
+        <tr>
+            <td>{{ record[0] }}</td>
+            <td><img src="{{ url_for('static', filename=record[2]) }}" alt="Uploaded Image" width="100"></td>
+            <td>{{ record[3] }}</td>
+            <td>{{ record[4] | round(2) }}%</td>
+            <td>{{ record[5] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

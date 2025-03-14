@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Classification - AI Model</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            margin: auto;
+        }
+        h2 {
+            color: #2c3e50;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .upload-label {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .upload-label:hover {
+            background: #2980b9;
+        }
+        button {
+            background: #2ecc71;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #27ae60;
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333;
+            padding: 15px;
+            background: #ecf0f1;
+            border-radius: 8px;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+        .retry-btn {
+            margin-top: 15px;
+            background: #e74c3c;
+        }
+        .retry-btn:hover {
+            background: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🖼️ Upload an Image for Prediction</h2>
+        
+        <form action="/predict" method="post" enctype="multipart/form-data" id="upload-form">
+            <label class="upload-label">
+                📤 Choose Image
+                <input type="file" name="file" accept="image/*" id="file-input" required>
+            </label>
+            <br>
+            <button type="submit">🔍 Predict</button>
+        </form>
+
+        <!-- Image Preview -->
+        <img id="preview-image" alt="Uploaded Image Preview">
+
+        {% if prediction is not none %}
+            <div class="result">
+                <h3>🔹 Prediction Result:</h3>
+                <p>📌 Predicted Class: <strong>{{ prediction }}</strong></p>
+                <p>📊 Confidence: <strong>{{ confidence*100 | round(2) }}%</strong></p>
+                <button class="retry-btn" onclick="window.location.reload();">🔄 Try Again</button>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Show preview of uploaded image
+        document.getElementById("file-input").addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById("preview-image");
+                    img.src = e.target.result;
+                    img.style.display = "block";
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
+</body>
+</html>
