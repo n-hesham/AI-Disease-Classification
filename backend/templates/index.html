@@ -11,18 +11,19 @@
     <input type="email" id="email" placeholder="البريد الإلكتروني">
     <input type="password" id="password" placeholder="كلمة المرور">
     <button onclick="login()">تسجيل الدخول</button>
-    <button onclick="logout()">تسجيل الخروج</button> <!-- زر تسجيل الخروج -->
+    <button onclick="logout()">تسجيل الخروج</button>
     <p id="loginStatus"></p>
 
     <h2>🔍 تحميل صورة للتنبؤ</h2>
-    <input type="file" id="imageUpload">
+    <input type="file" id="imageUpload" accept="image/*" onchange="previewImage()">
+    <img id="preview" style="display:none; width: 200px; margin-top: 10px;">
     <button onclick="predict()">رفع الصورة</button>
     <p id="predictionResult"></p>
 
     <script>
         let token = "";
 
-        function login() {
+        async function login() {
             const email = document.getElementById("email").value.trim();
             const password = document.getElementById("password").value.trim();
             const statusElement = document.getElementById("loginStatus");
@@ -33,24 +34,24 @@
             }
 
             statusElement.innerText = "⏳ جارٍ تسجيل الدخول...";
+            
+            try {
+                const response = await fetch("http://127.0.0.1:5000/api/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password })
+                });
 
-            fetch("http://127.0.0.1:5000/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password })
-            })
-            .then(async response => {
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || "فشل تسجيل الدخول!");
 
                 token = data.access_token;
                 console.log("🔑 Token received:", token);
                 statusElement.innerText = "✅ تم تسجيل الدخول!";
-            })
-            .catch(error => {
+            } catch (error) {
                 console.error("❌ Login error:", error);
                 statusElement.innerText = `❌ فشل تسجيل الدخول! ${error.message}`;
-            });
+            }
         }
 
         function logout() {
@@ -59,7 +60,29 @@
             console.log("🔒 Token cleared");
         }
 
-        function predict() {
+        function previewImage() {
+            const fileInput = document.getElementById("imageUpload");
+            const preview = document.getElementById("preview");
+
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    preview.src = e.target.result;
+                    preview.style.display = "block";
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = "none";
+            }
+        }
+
+        async function predict() {
+            if (!token) {
+                alert("⚠️ يرجى تسجيل الدخول أولاً!");
+                return;
+            }
+
             const fileInput = document.getElementById("imageUpload");
             const resultElement = document.getElementById("predictionResult");
 
@@ -72,26 +95,26 @@
             console.log("📂 Selected file:", file);
 
             const formData = new FormData();
-            formData.append("file", file);
+            formData.append("image", file);
 
             resultElement.innerText = "⏳ جارٍ تحليل الصورة...";
 
-            fetch("http://127.0.0.1:5000/api/predictions/predict", {
-                method: "POST",
-                headers: { "Authorization": `Bearer ${token}` },
-                body: formData
-            })
-            .then(async response => {
+            try {
+                const response = await fetch("http://127.0.0.1:5000/api/predictions/predict", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${token}` },
+                    body: formData // لا تضف Content-Type يدويًا عند استخدام FormData
+                });
+
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || "خطأ غير متوقع في التنبؤ!");
 
                 console.log("✅ Response received:", data);
                 resultElement.innerText = `🔍 التشخيص: ${data.diagnosis} | 🎯 الثقة: ${data.confidence}%`;
-            })
-            .catch(error => {
+            } catch (error) {
                 console.error("❌ Prediction error:", error);
                 resultElement.innerText = `⚠️ فشل التحليل! ${error.message}`;
-            });
+            }
         }
     </script>
 

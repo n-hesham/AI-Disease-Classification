@@ -14,12 +14,6 @@ class Config:
     # 🔍 مفتاح API لـ OpenAI (إن وجد)
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 
-    # 🤖 مسار الموديل (يدعم `.h5` و `.pkl`)
-    MODEL_PATH = os.getenv('MODEL_PATH', os.path.join(os.getcwd(), "models", "save_model", "model_classification.h5"))
-
-    # 🎯 حجم الصور المدخلة للنموذج
-    IMG_SIZE = (240, 240)
-
     # 🔹 إعدادات تسجيل الدخول الاجتماعي
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
@@ -38,7 +32,6 @@ class Config:
     def print_config():
         print(f"🔍 SECRET_KEY: {Config.SECRET_KEY[:5]}***")  # ✅ إخفاء المفتاح عند الطباعة
         print(f"🛢️ DATABASE_URL: {Config.SQLALCHEMY_DATABASE_URI}")
-        print(f"🤖 MODEL_PATH: {Config.MODEL_PATH}")
         print(f"🔹 GOOGLE_CLIENT_ID: {'SET' if Config.GOOGLE_CLIENT_ID else 'NOT SET'}")
         print(f"🔹 FACEBOOK_CLIENT_ID: {'SET' if Config.FACEBOOK_CLIENT_ID else 'NOT SET'}")
         print(f"🔹 APPLE_CLIENT_ID: {'SET' if Config.APPLE_CLIENT_ID else 'NOT SET'}")

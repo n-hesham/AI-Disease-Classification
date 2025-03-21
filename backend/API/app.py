@@ -30,15 +30,8 @@ app.config['SESSION_COOKIE_SECURE'] = False  # غيّر إلى True عند نش�
 app.secret_key = os.getenv('SECRET_KEY', 'secret-key-fallback')
 
 # -------------------- إعدادات CORS --------------------
-CORS(
-    app,
-    resources={r"/api/*": {
-        "origins": ["http://localhost:3000", "http://127.0.0.1:5000"],  # ✅ تحديد المصادر المسموح بها
-        "methods": ["GET", "POST", "PUT", "DELETE"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True
-    }}
-)
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+
 
 # -------------------- إعدادات JWT --------------------
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-key')

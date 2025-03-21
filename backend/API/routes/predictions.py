@@ -1,18 +1,19 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-import os
 import io
 import numpy as np
 import cv2
 from PIL import Image
 import tensorflow as tf
 from models import db, Prediction
-from config import Config
-from utils.model_loader import load_ai_model
 from flasgger import swag_from  
 
-# تحميل الموديل مرة واحدة عند بدء التشغيل
-model = load_ai_model()
+# تعريف Blueprint
+predictions_bp = Blueprint('predictions', __name__)
+
+# تحميل الموديل مباشرة داخل هذا الملف
+MODEL_PATH = r"models\save_model\model_classification.h5"  # تأكد من وضع المسار الصحيح للموديل
+model = tf.keras.models.load_model(MODEL_PATH)
 
 # أسماء التصنيفات
 class_names = {
@@ -24,9 +25,6 @@ class_names = {
     5: "Tuberculosis",
     6: "Viral Pneumonia"
 }
-
-# إنشاء Blueprint لـ API
-predictions_bp = Blueprint('predictions', __name__)
 
 @predictions_bp.route('/predict', methods=['POST'])
 @jwt_required()
@@ -56,7 +54,7 @@ predictions_bp = Blueprint('predictions', __name__)
                 }
             }
         },
-        400: {'description': 'No file uploaded'},
+        400: {'description': 'No file uploaded or invalid file'},
         415: {'description': 'Invalid image format'},
         500: {'description': 'Server error'}
     }
@@ -64,54 +62,49 @@ predictions_bp = Blueprint('predictions', __name__)
 def predict():
     """Predict Disease from an Uploaded Image"""
     print("🔍 Received request headers:", request.headers)  
-    print("📂 Received request files:", request.files)  
+    print("📂 Received request files:", request.files.keys())  
 
-    # التحقق من إرسال ملف الصورة
     if 'file' not in request.files:
         print("❌ No file uploaded!")
         return jsonify({"error": "No file uploaded"}), 400
 
+    file = request.files['file']
+
+    if file.filename == '' or file.content_length == 0:
+        print("❌ Empty file uploaded!")
+        return jsonify({"error": "Uploaded file is empty"}), 400
+
+    print(f"📁 Received file: {file.filename}, Type: {file.content_type}")
+
+    allowed_extensions = {"jpg", "jpeg", "png"}
+    file_extension = file.filename.rsplit('.', 1)[-1].lower()
+    if file_extension not in allowed_extensions:
+        print("❌ Unsupported file format!")
+        return jsonify({"error": "Unsupported file format"}), 415
+
     try:
-        file = request.files['file']
-        print(f"📁 Received file: {file.filename}, Type: {file.content_type}")
+        file.stream.seek(0)
+        img = Image.open(io.BytesIO(file.read()))
+        img.verify()
+        img = img.convert('RGB')
+        img = img.resize(240,240)
+        img_array = np.array(img) / 255.0
+        img_array = np.expand_dims(img_array, axis=0)
+    except Exception as e:
+        print(f"❌ Image processing error: {str(e)}")
+        return jsonify({"error": "Invalid or corrupted image file"}), 400
 
-        # التحقق من نوع الملف
-        allowed_extensions = {"jpg", "jpeg", "png"}
-        file_extension = file.filename.rsplit('.', 1)[-1].lower()
-        if file_extension not in allowed_extensions:
-            print("❌ Unsupported file format!")
-            return jsonify({"error": "Unsupported file format"}), 415
-
-        # قراءة الصورة باستخدام OpenCV
-        file_content = np.frombuffer(file.read(), np.uint8)
-        img = cv2.imdecode(file_content, cv2.IMREAD_COLOR)
-        if img is None:
-            print("❌ Invalid image format!")
-            return jsonify({"error": "Invalid image format"}), 415
-
-        # تحويل BGR إلى RGB
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = cv2.resize(img, Config.IMG_SIZE)  # إعادة تحجيم الصورة
-        img = img / 255.0  # تطبيع القيم بين 0 و 1
-        img_array = np.expand_dims(img, axis=0)  # إضافة بُعد جديد للمصفوفة
-
-        # تنفيذ التنبؤ
+    try:
         print("🤖 Running model prediction...")
         predictions = model.predict(img_array)
         print("✅ Prediction raw output:", predictions)
 
         predicted_class = np.argmax(predictions, axis=1)[0]
         confidence = round(float(np.max(predictions)) * 100, 2)
-
-        # التحقق من الفهرس الصحيح
-        if predicted_class < len(class_names):
-            diagnosis = class_names[predicted_class]
-        else:
-            diagnosis = "Unknown"
+        diagnosis = class_names.get(predicted_class, "Unknown")
 
         print(f"🎯 Diagnosis: {diagnosis}, Confidence: {confidence}%")
 
-        # حفظ التنبؤ في قاعدة البيانات
         user_id = get_jwt_identity()
         new_pred = Prediction(
             user_id=user_id,
@@ -128,5 +121,5 @@ def predict():
         }), 200
 
     except Exception as e:
-        print(f"❌ Server error: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ Model prediction error: {str(e)}")
+        return jsonify({"error": "Error during prediction"}), 500
