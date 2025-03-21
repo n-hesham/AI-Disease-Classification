@@ -1,14 +1,31 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+import os
 import io
 import numpy as np
+import cv2
 from PIL import Image
-from tensorflow.keras.preprocessing import image
+import tensorflow as tf
 from models import db, Prediction
 from config import Config
-from utils.model_loader import model, class_names
+from utils.model_loader import load_ai_model
 from flasgger import swag_from  
 
+# تحميل الموديل مرة واحدة عند بدء التشغيل
+model = load_ai_model()
+
+# أسماء التصنيفات
+class_names = {
+    0: "Bacterial Pneumonia",
+    1: "COVID-19",
+    2: "Edema",
+    3: "Lung Opacity",
+    4: "Normal",
+    5: "Tuberculosis",
+    6: "Viral Pneumonia"
+}
+
+# إنشاء Blueprint لـ API
 predictions_bp = Blueprint('predictions', __name__)
 
 @predictions_bp.route('/predict', methods=['POST'])
@@ -46,29 +63,53 @@ predictions_bp = Blueprint('predictions', __name__)
 })
 def predict():
     """Predict Disease from an Uploaded Image"""
+    print("🔍 Received request headers:", request.headers)  
+    print("📂 Received request files:", request.files)  
+
+    # التحقق من إرسال ملف الصورة
     if 'file' not in request.files:
+        print("❌ No file uploaded!")
         return jsonify({"error": "No file uploaded"}), 400
 
     try:
-        # قراءة ومعالجة الصورة
         file = request.files['file']
-        try:
-            img = Image.open(io.BytesIO(file.read()))
-            img = img.convert('RGB')  # تأكد من أنها صورة ملونة
-        except IOError:
+        print(f"📁 Received file: {file.filename}, Type: {file.content_type}")
+
+        # التحقق من نوع الملف
+        allowed_extensions = {"jpg", "jpeg", "png"}
+        file_extension = file.filename.rsplit('.', 1)[-1].lower()
+        if file_extension not in allowed_extensions:
+            print("❌ Unsupported file format!")
+            return jsonify({"error": "Unsupported file format"}), 415
+
+        # قراءة الصورة باستخدام OpenCV
+        file_content = np.frombuffer(file.read(), np.uint8)
+        img = cv2.imdecode(file_content, cv2.IMREAD_COLOR)
+        if img is None:
+            print("❌ Invalid image format!")
             return jsonify({"error": "Invalid image format"}), 415
 
-        img = img.resize(Config.IMG_SIZE)
-        img_array = image.img_to_array(img) / 255.0
-        img_array = np.expand_dims(img_array, axis=0)
+        # تحويل BGR إلى RGB
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img, Config.IMG_SIZE)  # إعادة تحجيم الصورة
+        img = img / 255.0  # تطبيع القيم بين 0 و 1
+        img_array = np.expand_dims(img, axis=0)  # إضافة بُعد جديد للمصفوفة
 
         # تنفيذ التنبؤ
-        pred = model.predict(img_array)
-        predicted_class = np.argmax(pred, axis=1)[0]
-        confidence = round(float(np.max(pred)) * 100, 2)
+        print("🤖 Running model prediction...")
+        predictions = model.predict(img_array)
+        print("✅ Prediction raw output:", predictions)
+
+        predicted_class = np.argmax(predictions, axis=1)[0]
+        confidence = round(float(np.max(predictions)) * 100, 2)
 
         # التحقق من الفهرس الصحيح
-        diagnosis = class_names[predicted_class] if predicted_class < len(class_names) else "Unknown"
+        if predicted_class < len(class_names):
+            diagnosis = class_names[predicted_class]
+        else:
+            diagnosis = "Unknown"
+
+        print(f"🎯 Diagnosis: {diagnosis}, Confidence: {confidence}%")
 
         # حفظ التنبؤ في قاعدة البيانات
         user_id = get_jwt_identity()
@@ -87,4 +128,5 @@ def predict():
         }), 200
 
     except Exception as e:
+        print(f"❌ Server error: {str(e)}")
         return jsonify({"error": str(e)}), 500

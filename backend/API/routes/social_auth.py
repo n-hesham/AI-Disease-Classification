@@ -1,9 +1,14 @@
 from flask import Blueprint, request, jsonify, redirect, url_for, session
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import (
+    create_access_token,
+    jwt_required,
+    create_refresh_token,
+    get_jwt_identity)
 from authlib.integrations.flask_client import OAuth
 from models import db, User
 import json
 from config import Config
+import os
 from flasgger import swag_from  # ✅ استيراد Flasgger
 
 social_auth_bp = Blueprint('social_auth', __name__)
@@ -11,12 +16,16 @@ social_auth_bp = Blueprint('social_auth', __name__)
 oauth = OAuth()
 
 # ✅ إعداد Google OAuth
+# في ملف routes/social_auth.py
 google = oauth.register(
     name='google',
-    client_id=Config.GOOGLE_CLIENT_ID,
-    client_secret=Config.GOOGLE_CLIENT_SECRET,
-    server_metadata_url=Config.GOOGLE_DISCOVERY_URL,
-    client_kwargs={'scope': 'openid email profile'}
+    client_id=os.getenv('GOOGLE_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        'scope': 'openid email profile',
+        'redirect_uri': 'http://localhost:5000/api/auth/social/google/callback'  # تأكد من المطابقة
+    }
 )
 
 # ✅ إعداد Facebook OAuth

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار AI API</title>
+</head>
+<body>
+
+    <h2>🚀 تسجيل الدخول</h2>
+    <input type="email" id="email" placeholder="البريد الإلكتروني">
+    <input type="password" id="password" placeholder="كلمة المرور">
+    <button onclick="login()">تسجيل الدخول</button>
+    <button onclick="logout()">تسجيل الخروج</button> <!-- زر تسجيل الخروج -->
+    <p id="loginStatus"></p>
+
+    <h2>🔍 تحميل صورة للتنبؤ</h2>
+    <input type="file" id="imageUpload">
+    <button onclick="predict()">رفع الصورة</button>
+    <p id="predictionResult"></p>
+
+    <script>
+        let token = "";
+
+        function login() {
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value.trim();
+            const statusElement = document.getElementById("loginStatus");
+
+            if (!email || !password) {
+                statusElement.innerText = "⚠️ يرجى إدخال البريد الإلكتروني وكلمة المرور!";
+                return;
+            }
+
+            statusElement.innerText = "⏳ جارٍ تسجيل الدخول...";
+
+            fetch("http://127.0.0.1:5000/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            })
+            .then(async response => {
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "فشل تسجيل الدخول!");
+
+                token = data.access_token;
+                console.log("🔑 Token received:", token);
+                statusElement.innerText = "✅ تم تسجيل الدخول!";
+            })
+            .catch(error => {
+                console.error("❌ Login error:", error);
+                statusElement.innerText = `❌ فشل تسجيل الدخول! ${error.message}`;
+            });
+        }
+
+        function logout() {
+            token = "";
+            document.getElementById("loginStatus").innerText = "🔒 تم تسجيل الخروج!";
+            console.log("🔒 Token cleared");
+        }
+
+        function predict() {
+            const fileInput = document.getElementById("imageUpload");
+            const resultElement = document.getElementById("predictionResult");
+
+            if (!fileInput.files.length) {
+                alert("❌ يرجى اختيار صورة!");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            console.log("📂 Selected file:", file);
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            resultElement.innerText = "⏳ جارٍ تحليل الصورة...";
+
+            fetch("http://127.0.0.1:5000/api/predictions/predict", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${token}` },
+                body: formData
+            })
+            .then(async response => {
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "خطأ غير متوقع في التنبؤ!");
+
+                console.log("✅ Response received:", data);
+                resultElement.innerText = `🔍 التشخيص: ${data.diagnosis} | 🎯 الثقة: ${data.confidence}%`;
+            })
+            .catch(error => {
+                console.error("❌ Prediction error:", error);
+                resultElement.innerText = `⚠️ فشل التحليل! ${error.message}`;
+            });
+        }
+    </script>
+
+</body>
+</html>
