@@ -18,7 +18,7 @@ from werkzeug.utils import secure_filename
 load_dotenv()
 
 # تحسين إدارة المسارات باستخدام مسارات نسبية
-template_dir = r'C:\Users\Nour Hesham\Downloads\New folder\backend\templates'
+template_dir = r'C:\Users\Nour Hesham\Downloads\AI-Disease-Classification\backend\templates'
 
 # إعدادات التطبيق
 app = Flask(__name__, template_folder=template_dir)
@@ -45,7 +45,7 @@ bcrypt = Bcrypt(app)  # تعريف واحد فقط لـ bcrypt مع سياق ا�
 migrate = Migrate(app, db)
 
 # Load the TensorFlow model
-model_path = r'C:\Users\Nour Hesham\Downloads\New folder\models\save_model\model_classification.h5'
+model_path = r'models\save_model\model_classification.h5'
 model = tf.keras.models.load_model(model_path)
 
 # Class names for predictions

@@ -1,122 +1,772 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>اختبار AI API</title>
+    <title>اختبار واجهة التشخيص الطبي</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            padding-top: 20px;
+        }
+        .main-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        .tab-content {
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .tab-pane {
+            min-height: 300px;
+        }
+        .medical-history-item {
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #4285f4;
+        }
+        .notification-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .notification-unread {
+            border-left: 4px solid #ea4335;
+        }
+        .notification-read {
+            border-left: 4px solid #34a853;
+        }
+        .result-container {
+            background: #f1f8ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            display: none;
+        }
+        .diagnosis-result {
+            font-size: 24px;
+            color: #4285f4;
+            margin-bottom: 10px;
+        }
+        .confidence-score {
+            font-size: 18px;
+            color: #0f9d58;
+        }
+        .image-preview {
+            max-width: 100%;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+        .login-message {
+            color: #4285f4;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+        }
+        .hidden {
+            display: none;
+        }
+        #apiResponseContainer {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+        #apiResponseText {
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .control-bar {
+            background-color: #f1f3f4;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logout-btn {
+            color: #ea4335;
+            cursor: pointer;
+        }
+        .user-info {
+            color: #4285f4;
+        }
+    </style>
 </head>
 <body>
+    <div class="container main-container">
+        <h1 class="text-center mb-4">نظام التشخيص الطبي للصور</h1>
+        
+        <!-- شريط التحكم - يظهر بعد تسجيل الدخول -->
+        <div id="controlBar" class="control-bar hidden">
+            <span class="user-info"><i class="fas fa-user"></i> <span id="currentUsername">مستخدم</span></span>
+            <span class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</span>
+        </div>
 
-    <h2>🚀 تسجيل الدخول</h2>
-    <input type="email" id="email" placeholder="البريد الإلكتروني">
-    <input type="password" id="password" placeholder="كلمة المرور">
-    <button onclick="login()">تسجيل الدخول</button>
-    <button onclick="logout()">تسجيل الخروج</button>
-    <p id="loginStatus"></p>
+        <!-- التبويبات الرئيسية -->
+        <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button" role="tab" aria-controls="login" aria-selected="true">تسجيل الدخول</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register" type="button" role="tab" aria-controls="register" aria-selected="false">إنشاء حساب</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link hidden" id="diagnosis-tab" data-bs-toggle="tab" data-bs-target="#diagnosis" type="button" role="tab" aria-controls="diagnosis" aria-selected="false">التشخيص</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link hidden" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab" aria-controls="history" aria-selected="false">السجل الطبي</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link hidden" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notifications" type="button" role="tab" aria-controls="notifications" aria-selected="false">الإشعارات</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link hidden" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab" aria-controls="profile" aria-selected="false">الملف الشخصي</button>
+            </li>
+        </ul>
 
-    <h2>🔍 تحميل صورة للتنبؤ</h2>
-    <input type="file" id="imageUpload" accept="image/*" onchange="previewImage()">
-    <img id="preview" style="display:none; width: 200px; margin-top: 10px;">
-    <button onclick="predict()">رفع الصورة</button>
-    <p id="predictionResult"></p>
+        <!-- محتوى التبويبات -->
+        <div class="tab-content" id="mainTabsContent">
+            <!-- تبويب تسجيل الدخول -->
+            <div class="tab-pane fade show active" id="login" role="tabpanel" aria-labelledby="login-tab">
+                <h3 class="mb-4">تسجيل الدخول</h3>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="loginUsername">اسم المستخدم</label>
+                        <input type="text" class="form-control" id="loginUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">كلمة المرور</label>
+                        <input type="password" class="form-control" id="loginPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">تسجيل الدخول</button>
+                </form>
+            </div>
 
+            <!-- تبويب التسجيل -->
+            <div class="tab-pane fade" id="register" role="tabpanel" aria-labelledby="register-tab">
+                <h3 class="mb-4">إنشاء حساب جديد</h3>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="regUsername">اسم المستخدم</label>
+                        <input type="text" class="form-control" id="regUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regName">الاسم الكامل</label>
+                        <input type="text" class="form-control" id="regName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regEmail">البريد الإلكتروني</label>
+                        <input type="email" class="form-control" id="regEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regPassword">كلمة المرور</label>
+                        <input type="password" class="form-control" id="regPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regPhone">رقم الهاتف</label>
+                        <input type="tel" class="form-control" id="regPhone">
+                    </div>
+                    <button type="submit" class="btn btn-success">إنشاء حساب</button>
+                </form>
+            </div>
+
+            <!-- تبويب التشخيص -->
+            <div class="tab-pane fade" id="diagnosis" role="tabpanel" aria-labelledby="diagnosis-tab">
+                <h3 class="mb-4">تشخيص صورة الأشعة</h3>
+                <form id="diagnosisForm">
+                    <div class="form-group">
+                        <label for="xrayImage">اختر صورة الأشعة</label>
+                        <input type="file" class="form-control" id="xrayImage" accept="image/*" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">تشخيص الصورة</button>
+                </form>
+                
+                <!-- نتيجة التشخيص -->
+                <div class="result-container" id="diagnosisResult">
+                    <h4>نتيجة التشخيص:</h4>
+                    <div class="diagnosis-result" id="diagnosisText"></div>
+                    <div class="confidence-score">نسبة الثقة: <span id="confidenceScore"></span>%</div>
+                    <div class="mt-3">
+                        <h5>الصورة المحللة:</h5>
+                        <img id="diagnosedImage" class="image-preview" src="" alt="صورة الأشعة">
+                    </div>
+                </div>
+            </div>
+
+            <!-- تبويب السجل الطبي -->
+            <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+                <h3 class="mb-4">السجل الطبي</h3>
+                <button class="btn btn-primary mb-3" onclick="fetchMedicalHistory()">تحديث السجل الطبي</button>
+                <div id="medicalHistoryContainer">
+                    <!-- ستتم إضافة التاريخ الطبي هنا بواسطة JavaScript -->
+                </div>
+            </div>
+
+            <!-- تبويب الإشعارات -->
+            <div class="tab-pane fade" id="notifications" role="tabpanel" aria-labelledby="notifications-tab">
+                <h3 class="mb-4">الإشعارات</h3>
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <input type="text" class="form-control" id="notificationMessage" placeholder="أدخل رسالة الإشعار">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-success w-100" onclick="sendNotification()">إرسال إشعار</button>
+                    </div>
+                </div>
+                <button class="btn btn-primary mb-3" onclick="fetchNotifications()">تحديث الإشعارات</button>
+                <div id="notificationsContainer">
+                    <!-- ستتم إضافة الإشعارات هنا بواسطة JavaScript -->
+                </div>
+            </div>
+
+            <!-- تبويب الملف الشخصي -->
+            <div class="tab-pane fade" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+                <h3 class="mb-4">الملف الشخصي</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">تحديث البيانات الشخصية</div>
+                            <div class="card-body">
+                                <form id="updateProfileForm">
+                                    <div class="form-group">
+                                        <label for="updateUsername">اسم المستخدم</label>
+                                        <input type="text" class="form-control" id="updateUsername">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="updatePhone">رقم الهاتف</label>
+                                        <input type="tel" class="form-control" id="updatePhone">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="profilePicture">الصورة الشخصية</label>
+                                        <input type="file" class="form-control" id="profilePicture" accept="image/*">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">تحديث البيانات</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">تغيير كلمة المرور</div>
+                            <div class="card-body">
+                                <form id="updatePasswordForm">
+                                    <div class="form-group">
+                                        <label for="currentPassword">كلمة المرور الحالية</label>
+                                        <input type="password" class="form-control" id="currentPassword" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newPassword">كلمة المرور الجديدة</label>
+                                        <input type="password" class="form-control" id="newPassword" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">تغيير كلمة المرور</button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header text-white bg-danger">حذف الحساب</div>
+                            <div class="card-body">
+                                <form id="deleteAccountForm">
+                                    <div class="form-group">
+                                        <label for="deletePassword">أدخل كلمة المرور للتأكيد</label>
+                                        <input type="password" class="form-control" id="deletePassword" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-danger">حذف الحساب</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- حاوية استجابات API -->
+        <div id="apiResponseContainer" class="mt-4">
+            <h5>استجابة API:</h5>
+            <pre id="apiResponseText">لا توجد استجابة حتى الآن.</pre>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let token = "";
-
-        async function login() {
-            const email = document.getElementById("email").value.trim();
-            const password = document.getElementById("password").value.trim();
-            const statusElement = document.getElementById("loginStatus");
-
-            if (!email || !password) {
-                statusElement.innerText = "⚠️ يرجى إدخال البريد الإلكتروني وكلمة المرور!";
-                return;
+        // المتغيرات العامة
+        let token = localStorage.getItem('authToken');
+        let currentUsername = localStorage.getItem('username');
+        
+        // عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            // التحقق مما إذا كان المستخدم قد سجل دخوله مسبقًا
+            if (token) {
+                showLoggedInTabs();
+                document.getElementById('currentUsername').textContent = currentUsername;
             }
 
-            statusElement.innerText = "⏳ جارٍ تسجيل الدخول...";
+            // إعداد مستمعي الأحداث لجميع النماذج
+            setupFormListeners();
+        });
+
+        // إعداد مستمعي الأحداث للنماذج
+        function setupFormListeners() {
+            // نموذج تسجيل الدخول
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                login();
+            });
+
+            // نموذج التسجيل
+            document.getElementById('registerForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                register();
+            });
+
+            // نموذج التشخيص
+            document.getElementById('diagnosisForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                uploadAndDiagnose();
+            });
+
+            // نموذج تحديث الملف الشخصي
+            document.getElementById('updateProfileForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                updateProfile();
+            });
+
+            // نموذج تغيير كلمة المرور
+            document.getElementById('updatePasswordForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                updatePassword();
+            });
+
+            // نموذج حذف الحساب
+            document.getElementById('deleteAccountForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                if (confirm('هل أنت متأكد من حذف حسابك؟ هذا الإجراء لا يمكن التراجع عنه.')) {
+                    deleteAccount();
+                }
+            });
+        }
+
+        // إظهار التبويبات للمستخدم المسجّل
+        function showLoggedInTabs() {
+            document.getElementById('login-tab').classList.add('hidden');
+            document.getElementById('register-tab').classList.add('hidden');
+            document.getElementById('diagnosis-tab').classList.remove('hidden');
+            document.getElementById('history-tab').classList.remove('hidden');
+            document.getElementById('notifications-tab').classList.remove('hidden');
+            document.getElementById('profile-tab').classList.remove('hidden');
+            
+            document.getElementById('controlBar').classList.remove('hidden');
+            
+            // تنشيط تبويب التشخيص
+            document.getElementById('diagnosis-tab').click();
+        }
+
+        // إظهار التبويبات للمستخدم غير المسجّل
+        function showLoggedOutTabs() {
+            document.getElementById('login-tab').classList.remove('hidden');
+            document.getElementById('register-tab').classList.remove('hidden');
+            document.getElementById('diagnosis-tab').classList.add('hidden');
+            document.getElementById('history-tab').classList.add('hidden');
+            document.getElementById('notifications-tab').classList.add('hidden');
+            document.getElementById('profile-tab').classList.add('hidden');
+            
+            document.getElementById('controlBar').classList.add('hidden');
+            
+            // تنشيط تبويب تسجيل الدخول
+            document.getElementById('login-tab').click();
+        }
+
+        // عرض استجابة API
+        function displayApiResponse(response) {
+            document.getElementById('apiResponseText').textContent = JSON.stringify(response, null, 2);
+        }
+
+        // تسجيل الدخول
+        async function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
             
             try {
-                const response = await fetch("http://127.0.0.1:5000/api/auth/login", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, password })
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
                 });
-
+                
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.error || "فشل تسجيل الدخول!");
-
-                token = data.access_token;
-                console.log("🔑 Token received:", token);
-                statusElement.innerText = "✅ تم تسجيل الدخول!";
+                displayApiResponse(data);
+                
+                if (response.status === 200) {
+                    token = data.access_token;
+                    currentUsername = username;
+                    localStorage.setItem('authToken', token);
+                    localStorage.setItem('username', username);
+                    
+                    showLoggedInTabs();
+                    document.getElementById('currentUsername').textContent = username;
+                    alert('تم تسجيل الدخول بنجاح');
+                } else {
+                    alert('فشل تسجيل الدخول: ' + (data.error || 'خطأ غير معروف'));
+                }
             } catch (error) {
-                console.error("❌ Login error:", error);
-                statusElement.innerText = `❌ فشل تسجيل الدخول! ${error.message}`;
+                console.error('Error:', error);
+                displayApiResponse({ error: 'Connection error: ' + error.message });
+                alert('حدث خطأ أثناء الاتصال بالخادم');
             }
         }
 
-        function logout() {
-            token = "";
-            document.getElementById("loginStatus").innerText = "🔒 تم تسجيل الخروج!";
-            console.log("🔒 Token cleared");
-        }
-
-        function previewImage() {
-            const fileInput = document.getElementById("imageUpload");
-            const preview = document.getElementById("preview");
-
-            if (fileInput.files.length > 0) {
-                const file = fileInput.files[0];
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    preview.src = e.target.result;
-                    preview.style.display = "block";
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.style.display = "none";
-            }
-        }
-
-        async function predict() {
-            if (!token) {
-                alert("⚠️ يرجى تسجيل الدخول أولاً!");
-                return;
-            }
-
-            const fileInput = document.getElementById("imageUpload");
-            const resultElement = document.getElementById("predictionResult");
-
-            if (!fileInput.files.length) {
-                alert("❌ يرجى اختيار صورة!");
-                return;
-            }
-
-            const file = fileInput.files[0];
-            console.log("📂 Selected file:", file);
-
-            const formData = new FormData();
-            formData.append("file", file);
-
-            resultElement.innerText = "⏳ جارٍ تحليل الصورة...";
-
+        // إنشاء حساب جديد
+        async function register() {
+            const username = document.getElementById('regUsername').value;
+            const name = document.getElementById('regName').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const phone = document.getElementById('regPhone').value;
+            
             try {
-                const response = await fetch("http://127.0.0.1:5000/api/predictions/predict", {
-                    method: "POST",
-                    headers: { "Authorization": `Bearer ${token}` },
-                    body: formData // لا تضف Content-Type يدويًا عند استخدام FormData
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, name, email, password, phone })
                 });
-
+                
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.error || "خطأ غير متوقع في التنبؤ!");
-
-                console.log("✅ Response received:", data);
-                resultElement.innerText = `🔍 التشخيص: ${data.diagnosis} | 🎯 الثقة: ${data.confidence}%`;
+                displayApiResponse(data);
+                
+                if (response.status === 201) {
+                    alert('تم إنشاء الحساب بنجاح، يمكنك الآن تسجيل الدخول');
+                    document.getElementById('login-tab').click();
+                } else {
+                    alert('فشل إنشاء الحساب: ' + (data.error || 'خطأ غير معروف'));
+                }
             } catch (error) {
-                console.error("❌ Prediction error:", error);
-                resultElement.innerText = `⚠️ فشل التحليل! ${error.message}`;
+                console.error('Error:', error);
+                displayApiResponse({ error: 'Connection error: ' + error.message });
+                alert('حدث خطأ أثناء الاتصال بالخادم');
+            }
+        }
+
+        // تسجيل الخروج
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('username');
+            token = null;
+            currentUsername = null;
+            showLoggedOutTabs();
+            alert('تم تسجيل الخروج بنجاح');
+        }
+
+        // تحميل وتشخيص صورة
+        async function uploadAndDiagnose() {
+            const fileInput = document.getElementById('xrayImage');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('الرجاء اختيار صورة أولاً');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                displayApiResponse(data);
+                
+                if (response.status === 200) {
+                    document.getElementById('diagnosisText').textContent = data.diagnosis;
+                    document.getElementById('confidenceScore').textContent = (data.confidence * 100).toFixed(2);
+                    document.getElementById('diagnosedImage').src = data.image_url;
+                    document.getElementById('diagnosisResult').style.display = 'block';
+                } else {
+                    alert('فشل في تحليل الصورة: ' + (data.error || 'خطأ غير معروف'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                displayApiResponse({ error: 'Connection error: ' + error.message });
+                alert('حدث خطأ أثناء الاتصال بالخادم');
+            }
+        }
+
+        // جلب السجل الطبي
+        async function fetchMedicalHistory() {
+            try {
+                const response = await fetch('/history', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+                
+                const data = await response.json();
+                displayApiResponse(data);
+                
+                if (response.status === 200) {
+                    const container = document.getElementById('medicalHistoryContainer');
+                    container.innerHTML = '';
+                    
+                    if (data.medical_history && data.medical_history.length > 0) {
+                        data.medical_history.forEach(item => {
+                            container.innerHTML += `
+                                <div class="medical-history-item">
+                                    <h5>التشخيص: ${item.diagnosis}</h5>
+                                    <img src="/uploads/${item.image_path}" alt="صورة أشعة" class="image-preview">
+                                </div>
+                            `;
+                        });
+                    } else {
+                        container.innerHTML = '<div class="alert alert-info">لا يوجد سجل طبي متاح حاليًا</div>';
+                    }
+                } else {
+                    alert('فشل في جلب السجل الطبي: ' + (data.error || 'خطأ غير معروف'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                displayApiResponse({ error: 'Connection error: ' + error.message });
+                alert('حدث خطأ أثناء الاتصال بالخادم');
+            }
+        }
+
+        // إرسال إشعار
+        async function sendNotification() {
+            const message = document.getElementById('notificationMessage').value;
+            if (!message.trim()) {
+                alert('الرجاء إدخال رسالة الإشعار');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/send_notification', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message })
+                });
+                
+                const data = await response.json();
+                displayApiResponse(data);
+                
+                if (response.status === 200) {
+                    document.getElementById('notificationMessage').value = '';
+                    fetchNotifications();
+                    alert('تم إرسال الإشعار بنجاح');
+                } else {
+                    alert('فشل في إرسال الإشعار: ' + (data.error || 'خطأ غير معروف'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                displayApiResponse({ error: 'Connection error: ' + error.message });
+                alert('حدث خطأ أثناء الاتصال بالخادم');
+            }
+        }
+
+        // جلب الإشعارات
+        async function fetchNotifications() {
+            try {
+                const response = await fetch('/notifications', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+                
+                const data = await response.json();
+                displayApiResponse(data);
+                
+                if (response.status === 200) {
+                    const container = document.getElementById('notificationsContainer');
+                    container.innerHTML = '';
+                    
+                    if (data.notifications && data.notifications.length > 0) {
+                        data.notifications.forEach((notification, index) => {
+                            const readClass = notification.read ? 'notification-read' : 'notification-unread';
+                            const readText = notification.read ? 'مقروء' : 'غير مقروء';
+                            const date = new Date(notification.timestamp).toLocaleString('ar');
+                            
+                            container.innerHTML += `
+                                <div class="notification-item ${readClass}">
+                                    <div class="d-flex justify-content-between">
+                                        <span>${notification.message}</span>
+                                        <button class="btn btn-sm ${notification.read ? 'btn-secondary' : 'btn-primary'}" 
+                                                ${notification.read ? 'disabled' : ''} 
+                                                onclick="markNotificationRead(${index})">
+                                            ${readText}
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">${date}</small>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        container.innerHTML = '<div class="alert alert-info">لا توجد إشعارات متاحة حاليًا</div>';
+                    }
+                } else {
+                    alert('فشل في جلب الإشعارات: ' + (data.error || 'خطأ غير معروف'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                displayApiResponse({ error: 'Connection error: ' + error.message });
+                alert('حدث خطأ أثناء الاتصال بالخادم');
+            }
+        }
+
+        // وضع علامة على إشعار كمقروء
+        async function markNotificationRead(index) {
+            try {
+                const response = await fetch(`/mark_notification_read/${index + 1}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+                
+                const data = await response.json();
+                displayApiResponse(data);
+                
+                if (response.status === 200) {
+                    fetchNotifications();
+                } else {
+                    alert('فشل في تحديث حالة الإشعار: ' + (data.error || 'خطأ غير معروف'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                displayApiResponse({ error: 'Connection error: ' + error.message });
+                alert('حدث خطأ أثناء الاتصال بالخادم');
+            }
+        }
+
+        // تحديث الملف ال
+        // تحديث الملف الشخصي
+        async function updateProfile() {
+            const username = document.getElementById('updateUsername').value;
+            const phone = document.getElementById('updatePhone').value;
+            const fileInput = document.getElementById('profilePicture');
+            
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('phone', phone);
+            if (fileInput.files.length > 0) {
+                formData.append('profile_picture', fileInput.files[0]);
+            }
+            
+            try {
+                const response = await fetch('/update_profile', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                displayApiResponse(data);
+                
+                if (response.status === 200) {
+                    alert('تم تحديث الملف الشخصي بنجاح');
+                    document.getElementById('currentUsername').textContent = username;
+                } else {
+                    alert('فشل في تحديث الملف الشخصي: ' + (data.error || 'خطأ غير معروف'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                displayApiResponse({ error: 'Connection error: ' + error.message });
+                alert('حدث خطأ أثناء الاتصال بالخادم');
+            }
+        }
+
+        // تغيير كلمة المرور
+        async function updatePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            
+            try {
+                const response = await fetch('/update_password', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+                });
+                
+                const data = await response.json();
+                displayApiResponse(data);
+                
+                if (response.status === 200) {
+                    alert('تم تغيير كلمة المرور بنجاح');
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                } else {
+                    alert('فشل في تغيير كلمة المرور: ' + (data.error || 'خطأ غير معروف'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                displayApiResponse({ error: 'Connection error: ' + error.message });
+                alert('حدث خطأ أثناء الاتصال بالخادم');
+            }
+        }
+
+        // حذف الحساب
+        async function deleteAccount() {
+            const password = document.getElementById('deletePassword').value;
+            
+            try {
+                const response = await fetch('/delete_user', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password })
+                });
+                
+                const data = await response.json();
+                displayApiResponse(data);
+                
+                if (response.status === 200) {
+                    alert('تم حذف الحساب بنجاح');
+                    logout();
+                } else {
+                    alert('فشل في حذف الحساب: ' + (data.error || 'خطأ غير معروف'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                displayApiResponse({ error: 'Connection error: ' + error.message });
+                alert('حدث خطأ أثناء الاتصال بالخادم');
             }
         }
     </script>
-
 </body>
 </html>
