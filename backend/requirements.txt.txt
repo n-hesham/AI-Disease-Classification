@@ -1,0 +1,21 @@
+# --- START OF FILE requirements.txt ---
+Flask
+gunicorn
+Flask-SQLAlchemy
+Flask-JWT-Extended
+Flask-Migrate
+Flask-Bcrypt
+Flask-Mail
+Flask-Cors
+Authlib
+python-dotenv
+SQLAlchemy # Often installed as a dependency of Flask-SQLAlchemy, but good to list
+requests # Used by google-auth and potentially other integrations
+google-auth
+google-auth-oauthlib
+tensorflow # Or tensorflow-cpu if you don't need/have GPU support
+numpy
+opencv-python # For cv2 used in image_processing.py
+Pillow # For PIL used in image_processing.py
+google-generativeai # Assuming this or similar is used for the consultation service based on context - PLEASE VERIFY
+# --- END OF FILE requirements.txt ---
