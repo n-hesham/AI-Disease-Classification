@@ -341,10 +341,10 @@
                                  <p class="mb-2"><strong>Diagnosis:</strong> <span id="diagnosis-text" class="fw-bold text-primary">N/A</span></p>
                                  <p class="mb-2"><strong>Confidence:</strong> <span id="confidence-text" class="badge">N/A</span></p>
                                  <p class="mb-3"><strong>Time:</strong> <span id="diagnosis-time" class="small text-muted">N/A</span></p>
+                                 <button id="learn-more-btn" class="btn btn-sm btn-outline-info" style="display: none;"><i class="fas fa-book-reader fa-fw"></i> Learn more about this diagnosis</button>
                                  <hr>
-                                 <h5 class="mt-4 mb-3"><i class="fas fa-comment-dots text-success me-2"></i>Medical Consultation</h5>
+                                 <h5 class="mt-4 mb-3"><i class="fas fa-comment-dots text-success me-2"></i>AI Medical Consultation</h5>
                                  <div id="consultation-text" class="small">
-                                     {/* Content dynamically loaded here */}
                                       <p class="text-muted mb-0">Consultation details will appear here if available...</p>
                                  </div>
                              </div>
@@ -609,7 +609,7 @@
          </div>
      </div>
 
-    <!-- History Detail Modal -->
+    <!-- [NEW] History Detail Modal -->
     <div class="modal fade" id="historyDetailModal" tabindex="-1" aria-labelledby="historyDetailModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-lg">
@@ -654,14 +654,14 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <!-- Main Application Logic -->
+    <!-- Main Application Logic (with UX Enhancements) -->
     <script>
         // --- Application State ---
         const AppState = {
             currentUser: null,
             accessToken: localStorage.getItem('accessToken'),
             // !!! IMPORTANT: Ensure this matches your backend protocol (HTTP/HTTPS) !!!
-            apiBaseUrl: 'http://127.0.0.1:5000',
+            apiBaseUrl: 'https://127.0.0.1:5000',
             currentProfilePictureFile: null,
             currentResetToken: null,
         };
@@ -981,13 +981,18 @@
             // Diagnose Section
             document.getElementById('xray-image')?.addEventListener('change', previewImage);
             document.getElementById('upload-btn')?.addEventListener('click', uploadAndDiagnose);
+            document.getElementById('learn-more-btn')?.addEventListener('click', learnMoreAboutDiagnosis);
 
             // History Section (Delegation)
-            document.getElementById('refresh-history-btn')?.addEventListener('click', loadMedicalHistory);
+            document.getElementById('refresh-history-btn')?.addEventListener('click', (e) => {
+                const icon = e.currentTarget.querySelector('i');
+                icon.classList.add('fa-spin');
+                loadMedicalHistory().finally(() => icon.classList.remove('fa-spin'));
+            });
             document.getElementById('history-list')?.addEventListener('click', (e) => {
                  const deleteButton = e.target.closest('.delete-history-btn');
                  const imageButton = e.target.closest('.history-image-btn');
-                 const detailsButton = e.target.closest('.view-details-btn'); // Added
+                 const detailsButton = e.target.closest('.view-details-btn');
 
                  if (deleteButton) {
                      const recordId = deleteButton.dataset.recordId;
@@ -997,8 +1002,8 @@
                      if (imageUrl && !imageUrl.includes('placeholder.com') && !imageUrl.includes('Error')) {
                           showImageModal(imageUrl);
                      }
-                 } else if (detailsButton) { // Handle details button click
-                      showHistoryDetailModal(detailsButton); // Call the new function
+                 } else if (detailsButton) {
+                      showHistoryDetailModal(detailsButton);
                  }
              });
 
@@ -1021,7 +1026,11 @@
             document.getElementById('confirm-delete-account')?.addEventListener('click', handleDeleteAccount);
 
             // Notifications Section (Delegation)
-            document.getElementById('refresh-notifications-btn')?.addEventListener('click', loadNotifications);
+            document.getElementById('refresh-notifications-btn')?.addEventListener('click', (e) => {
+                const icon = e.currentTarget.querySelector('i');
+                icon.classList.add('fa-spin');
+                loadNotifications().finally(() => icon.classList.remove('fa-spin'));
+            });
             document.getElementById('mark-all-read-btn')?.addEventListener('click', markAllNotificationsAsRead);
             document.getElementById('notifications-list')?.addEventListener('click', function(event) {
                  const button = event.target.closest('.mark-read-btn');
@@ -1155,7 +1164,7 @@
             if (newPassword !== confirmPassword) { showError('Password Mismatch', 'New passwords do not match.'); return; }
 
             showLoading('Updating Password...');
-            axios.post(`${AppState.apiBaseUrl}/auth/reset-password/${token}`, { password: newPassword, password_confirmation: confirmPassword })
+            axios.post(`${AppState.apiBaseUrl}/auth/reset-password/${token}`, { password: newPassword, password_confirmation: confirmNewPassword })
             .then(response => {
                 Swal.close();
                 showSuccess('Password Updated!', response.data?.message || 'Password has been reset successfully.', 2500);
@@ -1194,6 +1203,7 @@
                  // Reset diagnosis display when new image is selected
                  document.getElementById('diagnosis-placeholder')?.style.setProperty('display', 'flex');
                  document.getElementById('diagnosis-result')?.style.setProperty('display', 'none', 'important');
+                 document.getElementById('learn-more-btn').style.display = 'none';
                  document.getElementById('consultation-text').innerHTML = '<p class="text-muted mb-0">Consultation details will appear here...</p>';
             } else {
                 resetImageUpload();
@@ -1202,13 +1212,14 @@
 
          function resetImageUpload() {
              console.log("Resetting image upload form.");
-             document.getElementById('upload-form')?.reset(); // Reset the form itself
+             document.getElementById('upload-form')?.reset();
              document.getElementById('previewImage').src = '#';
              document.getElementById('previewImage').style.display = 'none';
              document.getElementById('upload-placeholder').style.display = 'flex';
              document.getElementById('upload-btn').disabled = true;
              document.getElementById('diagnosis-placeholder')?.style.setProperty('display', 'flex');
              document.getElementById('diagnosis-result')?.style.setProperty('display', 'none', 'important');
+             document.getElementById('learn-more-btn').style.display = 'none';
              // Clear specific result fields
              document.getElementById('diagnosis-text').textContent = 'N/A';
              document.getElementById('confidence-text').textContent = 'N/A';
@@ -1224,9 +1235,8 @@
 
             const formData = new FormData();
             formData.append('image', file);
-            showLoading('Analyzing Image & Fetching Consultation...'); // Updated loading message
+            showLoading('Analyzing Image & Fetching Consultation...');
 
-            // Backend now handles consultation synchronously
             axios.post(`${AppState.apiBaseUrl}/image/upload`, formData, { headers: { 'Authorization': `Bearer ${AppState.accessToken}` } })
             .then(response => {
                  Swal.close();
@@ -1234,50 +1244,60 @@
                  if (response.data.status === 'error') { throw new Error(response.data.error || 'Diagnosis failed on server.'); }
 
                  console.log("Diagnosis & Consultation response:", response.data);
-                 displayDiagnosisResult(response.data); // Display results including consultation
+                 displayDiagnosisResult(response.data);
                  loadMedicalHistory(); // Refresh history list
                  showSuccess("Analysis Complete", `Diagnosis: ${response.data.diagnosis || 'N/A'}`, 2000);
             })
             .catch(error => handleApiError(error, 'Diagnosis Failed'));
         }
 
-        // --- UPDATED displayDiagnosisResult for SYNCHRONOUS response ---
+        // --- UPDATED displayDiagnosisResult for SYNCHRONOUS response & UX ---
         function displayDiagnosisResult(result) {
             document.getElementById('diagnosis-placeholder')?.style.setProperty('display', 'none', 'important');
             const resultDiv = document.getElementById('diagnosis-result');
-            if (!resultDiv) return;
             resultDiv.style.display = 'block';
         
-            // Update Diagnosis Info
-            const diagnosisText = document.getElementById('diagnosis-text');
+            const diagnosis = result.diagnosis || 'N/A';
+            document.getElementById('diagnosis-text').textContent = diagnosis;
+
+            const confidence = parseFloat(result.confidence);
             const confidenceText = document.getElementById('confidence-text');
-            const diagnosisTime = document.getElementById('diagnosis-time');
+            confidenceText.textContent = !isNaN(confidence) ? `${confidence.toFixed(2)}%` : 'N/A';
+            confidenceText.className = `badge ${getConfidenceBadgeClass(confidence / 100)}`;
+            
+            document.getElementById('diagnosis-time').textContent = result.timestamp ? new Date(result.timestamp).toLocaleString() : 'N/A';
         
-            if (diagnosisText) diagnosisText.textContent = result.diagnosis || 'N/A';
-            if (confidenceText) {
-                const confidence = parseFloat(result.confidence);
-                confidenceText.textContent = !isNaN(confidence) ? `${confidence.toFixed(2)}%` : 'N/A';
-                confidenceText.className = `badge ${getConfidenceBadgeClass(confidence / 100)}`;
-            }
-            if (diagnosisTime) diagnosisTime.textContent = result.timestamp ? new Date(result.timestamp).toLocaleString() : 'N/A';
-        
-            // Update Consultation Info Area
             const consultationDiv = document.getElementById('consultation-text');
-            if (consultationDiv) {
-                consultationDiv.classList.remove('text-muted', 'text-info', 'text-warning'); // Reset classes
-        
-                if (result.consultation) {
-                    consultationDiv.textContent = result.consultation;
-                } else if (result.warnings && result.warnings.length > 0) {
-                    consultationDiv.innerHTML = `<p class="fst-italic mb-0 text-warning"><i class="fas fa-exclamation-triangle me-2"></i> ${result.warnings.join('<br>')}</p>`;
-                    consultationDiv.classList.add('text-warning');
-                } else {
-                    consultationDiv.innerHTML = '<p class="text-muted mb-0">Consultation details not available for this diagnosis.</p>';
-                    consultationDiv.classList.add('text-muted');
-                }
+            if (result.consultation) {
+                consultationDiv.textContent = result.consultation;
+            } else if (result.warnings && result.warnings.length > 0) {
+                consultationDiv.innerHTML = `<p class="fst-italic mb-0 text-warning"><i class="fas fa-exclamation-triangle me-2"></i> ${result.warnings.join('<br>')}</p>`;
+            } else {
+                consultationDiv.innerHTML = '<p class="text-muted mb-0">Consultation details not available.</p>';
+            }
+
+            // UX Improvement: Show "Learn More" button
+            const learnMoreBtn = document.getElementById('learn-more-btn');
+            if (diagnosis !== 'N/A' && diagnosis !== 'Normal') {
+                learnMoreBtn.dataset.disease = diagnosis;
+                learnMoreBtn.style.display = 'inline-block';
+            } else {
+                learnMoreBtn.style.display = 'none';
             }
         }
         
+        // --- [NEW] UX function to link diagnosis to consultation ---
+        function learnMoreAboutDiagnosis(event) {
+            const diseaseName = event.currentTarget.dataset.disease;
+            if (diseaseName) {
+                // Pre-fill the consultation form
+                document.getElementById('disease-name').value = diseaseName;
+                // Navigate to the consultation section
+                navigateToSection('consult-section');
+                // Automatically fetch the consultation
+                getDiseaseConsultation();
+            }
+        }
 
         // Medical History
         function loadMedicalHistory() {
@@ -1289,7 +1309,7 @@
              historyList.innerHTML = `<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>`;
              emptyState.style.display = 'none';
 
-            axios.get(`${AppState.apiBaseUrl}/history`, { headers: { 'Authorization': `Bearer ${AppState.accessToken}` } })
+            return axios.get(`${AppState.apiBaseUrl}/history`, { headers: { 'Authorization': `Bearer ${AppState.accessToken}` } })
             .then(response => {
                  console.log("History data received:", response.data);
                  historyList.innerHTML = '';
@@ -1310,17 +1330,16 @@
                          const thumbnailUrl = record.image_thumbnail_url || record.image_url || `https://via.placeholder.com/60/EFEFEF/AAAAAA?text=No+Img`;
                          const fullImageUrl = record.image_url || thumbnailUrl;
                          const diagnosis = record.diagnosis || 'N/A';
-                         const confidence = record.confidence;
-                         const confidenceFormatted = confidence ? `${(parseFloat(confidence) * 100).toFixed(2)}%` : 'N/A';
+                         const confidence = record.confidence != null ? parseFloat(record.confidence) : null;
+                         const confidenceFormatted = confidence != null ? `${(confidence * 100).toFixed(2)}%` : 'N/A';
                          const timestamp = record.timestamp;
                          const timestampFormatted = timestamp ? new Date(timestamp).toLocaleString() : 'N/A';
-                         const consultationText = record.consultation || ""; // Get consultation text
+                         const consultationText = record.consultation || "";
 
                          row.innerHTML = `
                              <td class="ps-3">
                                  <img src="${thumbnailUrl}" data-full-url="${fullImageUrl}"
                                       class="img-thumbnail history-image-btn p-1" alt="X-ray ${record.id}"
-                                      style="${record.image_url ? 'cursor: pointer;' : ''}"
                                       onerror="this.onerror=null; this.src='https://via.placeholder.com/60/FA8072/FFFFFF?text=Error'; this.style.cursor='default'; this.dataset.fullUrl='';">
                              </td>
                              <td>${diagnosis}</td>
@@ -1329,7 +1348,7 @@
                              <td class="text-end pe-3 history-actions">
                                  <button class="btn btn-sm btn-outline-info view-details-btn"
                                          data-record-id="${record.id}" data-diagnosis="${diagnosis}"
-                                         data-confidence="${confidence || ''}" data-timestamp="${timestamp || ''}"
+                                         data-confidence="${confidence != null ? confidence : ''}" data-timestamp="${timestamp || ''}"
                                          data-consultation="${encodeURIComponent(consultationText)}"
                                          title="View Details">
                                      <i class="fas fa-info-circle fa-fw"></i>
@@ -1353,44 +1372,36 @@
         }
 
          function getConfidenceBadgeClass(confidence) {
-             if (confidence === null || confidence === undefined || isNaN(parseFloat(confidence))) return 'bg-secondary';
-              const confNum = parseFloat(confidence);
-             if (confNum >= 0.85) return 'bg-success';
-             if (confNum >= 0.6) return 'bg-warning text-dark';
+             if (confidence === null || isNaN(confidence)) return 'bg-secondary';
+             if (confidence >= 0.85) return 'bg-success';
+             if (confidence >= 0.6) return 'bg-warning text-dark';
              return 'bg-danger';
          }
 
-        // Function to show the history detail modal
+        // --- [NEW] Function to show the history detail modal ---
         function showHistoryDetailModal(buttonElement) {
             const modalElement = document.getElementById('historyDetailModal');
             if (!modalElement || !buttonElement) return;
 
-            // Get data from the button's data attributes
             const recordId = buttonElement.dataset.recordId || 'N/A';
             const diagnosis = buttonElement.dataset.diagnosis || 'N/A';
             const confidenceRaw = buttonElement.dataset.confidence;
             const timestampRaw = buttonElement.dataset.timestamp;
-            // Decode the consultation text
             const consultation = decodeURIComponent(buttonElement.dataset.consultation || 'Not available.');
 
-            // Format data for display
             const confidence = confidenceRaw ? parseFloat(confidenceRaw) : null;
-            const confidenceFormatted = confidence ? `${parseFloat(confidence).toFixed(2)}%` : 'N/A';
-
+            const confidenceFormatted = confidence != null ? `${(confidence * 100).toFixed(2)}%` : 'N/A';
             const confidenceBadgeClass = getConfidenceBadgeClass(confidence);
             const timestampFormatted = timestampRaw ? new Date(timestampRaw).toLocaleString() : 'N/A';
 
-            // Populate modal elements
             document.getElementById('detail-record-id').textContent = recordId;
             document.getElementById('detail-timestamp').textContent = timestampFormatted;
             document.getElementById('detail-diagnosis').textContent = diagnosis;
             const confidenceBadge = document.getElementById('detail-confidence');
             confidenceBadge.textContent = confidenceFormatted;
             confidenceBadge.className = `badge ${confidenceBadgeClass}`;
-            // Use textContent to preserve formatting (newlines) from AI response
             document.getElementById('detail-consultation').textContent = consultation;
 
-            // Show the modal
             const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
             modal.show();
         }
@@ -1438,7 +1449,7 @@
                  if (!response.data || typeof response.data !== 'object') { throw new Error("Invalid consultation response."); }
                  if (response.data.status === 'error') { throw new Error(response.data.error || 'Failed to get consultation.'); }
                  console.log("Consultation response:", response.data);
-                 displayConsultationResult(response.data); // Display in the consultation section UI
+                 displayConsultationResult(response.data);
             })
             .catch(error => {
                  document.getElementById('consultation-placeholder')?.style.setProperty('display', 'flex', 'important');
@@ -1447,12 +1458,10 @@
             });
         }
 
-        // Display consultation result in the 'Consult' section
         function displayConsultationResult(result) {
             document.getElementById('consultation-placeholder')?.style.setProperty('display', 'none', 'important');
             document.getElementById('consultation-result')?.style.setProperty('display', 'block');
             document.getElementById('consultation-disease').textContent = result.disease || 'Consultation Information';
-            // Use textContent to preserve formatting from AI (newlines) due to CSS white-space: pre-wrap
             document.getElementById('consultation-content').textContent = result.consultation || 'No detailed information available.';
         }
 
@@ -1478,20 +1487,20 @@
              document.getElementById('profile-name').value = user.name || '';
              document.getElementById('profile-email').value = user.email || '';
              document.getElementById('profile-phone').value = user.phone || '';
-             document.getElementById('profile-picture-input').value = ''; // Reset file input
+             document.getElementById('profile-picture-input').value = '';
              AppState.currentProfilePictureFile = null;
          }
 
         function showProfileViewMode() {
             document.getElementById('profile-view-mode')?.style.setProperty('display', 'block');
             document.getElementById('profile-edit-mode')?.style.setProperty('display', 'none', 'important');
-            populateProfileViewData(); // Refresh view data
+            populateProfileViewData();
         }
 
         function showProfileEditMode() {
             document.getElementById('profile-view-mode')?.style.setProperty('display', 'none', 'important');
             document.getElementById('profile-edit-mode')?.style.setProperty('display', 'block');
-            populateProfileEditData(); // Populate edit fields
+            populateProfileEditData();
         }
 
          function handleProfilePicturePreview() {
@@ -1532,7 +1541,7 @@
                  AppState.currentUser = response.data.user; // Update state with fresh data
                  AppState.currentProfilePictureFile = null;
                  showSuccess('Profile Updated!', '', 1500);
-                 updateUIForLoggedInUser(); // Update navbar etc.
+                 updateUIForLoggedInUser();
                  showProfileViewMode();
              })
              .catch(error => { handleApiError(error, 'Profile Update Failed'); });
@@ -1577,7 +1586,6 @@
             passwordInput.value = '';
             passwordInput.removeAttribute('required');
 
-            // Check backend flag for password status
             const isGoogleOnlyUser = AppState.currentUser.google_id && !AppState.currentUser.password;
             console.log(`Delete check: Google-only=${isGoogleOnlyUser}`);
 
@@ -1596,11 +1604,11 @@
             let proceed = true;
             let requestConfig = { headers: { 'Authorization': `Bearer ${AppState.accessToken}` }, data: {} };
 
-            if (!isGoogleOnlyUser) { // Standard user requires password
+            if (!isGoogleOnlyUser) {
                 const password = passwordInput?.value;
                 if (!password) { showWarning('Password Required', 'Enter password to confirm deletion.', false); passwordInput?.focus(); proceed = false; }
                 else { requestConfig.data = { password: password }; console.log("Standard delete: Password provided."); }
-            } else { console.log("Google delete: No password needed."); } // Google user proceeds
+            } else { console.log("Google delete: No password needed."); }
 
             if (!proceed) { console.log("Deletion stopped."); return; }
 
@@ -1609,11 +1617,11 @@
             axios.delete(`${AppState.apiBaseUrl}/profile/delete_user`, requestConfig)
                 .then((response) => {
                      Swal.close(); console.log("Account deleted.");
-                     logout(false); // Logout silently
+                     logout(false);
                      showSuccess('Account Deleted', response.data?.message || 'Account permanently deleted.', 3000);
                 })
                 .catch(error => {
-                     if (!isGoogleOnlyUser && passwordInput) { passwordInput.value = ''; } // Clear pass on error for standard user
+                     if (!isGoogleOnlyUser && passwordInput) { passwordInput.value = ''; }
                      handleApiError(error, 'Account Deletion Failed');
                 });
         }
@@ -1630,7 +1638,7 @@
              listEl.innerHTML = `<div class="list-group-item text-center p-4 text-muted"><div class="spinner-border text-primary spinner-border-sm" role="status"></div><span class="ms-2">Loading...</span></div>`;
              badgeEl.style.display = 'none'; emptyEl.style.display = 'none';
 
-             axios.get(`${AppState.apiBaseUrl}/notifications`, { headers: { 'Authorization': `Bearer ${AppState.accessToken}` } })
+             return axios.get(`${AppState.apiBaseUrl}/notifications`, { headers: { 'Authorization': `Bearer ${AppState.accessToken}` } })
              .then(response => {
                  console.log("Notifications received:", response.data);
                  listEl.innerHTML = '';
@@ -1642,7 +1650,7 @@
                          if (!n.read) unreadCount++;
                          const item = document.createElement('div');
                          item.className = `list-group-item list-group-item-action d-flex justify-content-between align-items-center ${n.read ? 'notification-read' : 'list-group-item-light'}`;
-                         item.setAttribute('role', 'button'); // Make items clickable if needed later
+                         item.setAttribute('role', 'button');
                          item.innerHTML = `
                              <div class="ms-2 me-auto">
                                  <div class="notification-message">${n.message || 'No message content'}</div>
@@ -1679,12 +1687,11 @@
             axios.put(`${AppState.apiBaseUrl}/notifications/mark_notification_read/${notificationId}`, {}, { headers: { 'Authorization': `Bearer ${AppState.accessToken}` } })
             .then(() => {
                  buttonElement.innerHTML = '<i class="fas fa-check fa-fw"></i>';
-                 buttonElement.className = 'btn btn-sm btn-outline-secondary disabled mark-read-btn flex-shrink-0 ms-2'; // Update classes
+                 buttonElement.className = 'btn btn-sm btn-outline-secondary disabled mark-read-btn flex-shrink-0 ms-2';
                  buttonElement.title = 'Read';
                  buttonElement.setAttribute('tabindex', '-1');
                  buttonElement.closest('.list-group-item')?.classList.remove('list-group-item-light');
                  buttonElement.closest('.list-group-item')?.classList.add('notification-read');
-                 // Update badge count
                  const badge = document.getElementById('notification-count');
                  if (badge && badge.style.display !== 'none') {
                       let count = parseInt(badge.textContent) || 0;
@@ -1694,7 +1701,7 @@
                   }
             })
             .catch(error => {
-                 buttonElement.disabled = false; buttonElement.innerHTML = originalIconHTML; // Revert button
+                 buttonElement.disabled = false; buttonElement.innerHTML = originalIconHTML;
                  handleApiError(error, 'Failed to Mark Read');
             });
         }
@@ -1709,7 +1716,7 @@
              markAllBtn.disabled = true; markAllBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
 
              axios.put(`${AppState.apiBaseUrl}/notifications/mark_all_notifications_read`, {}, { headers: { 'Authorization': `Bearer ${AppState.accessToken}` } })
-            .then(() => { showSuccess('All Marked Read', '', 1000); loadNotifications(); }) // Refresh list
+            .then(() => { showSuccess('All Marked Read', '', 1000); loadNotifications(); })
             .catch(error => handleApiError(error, 'Failed to Mark All Read'))
             .finally(() => { markAllBtn.disabled = false; markAllBtn.innerHTML = '<i class="fas fa-check-double fa-fw"></i>'; });
         }
@@ -1722,7 +1729,7 @@
         function showInfo(title, text = '', showConfirm = true) { Swal.fire({ icon: 'info', title: title, text: text, showConfirmButton: showConfirm, confirmButtonColor: 'var(--bs-primary)', customClass: { popup: 'shadow-lg rounded' } }); }
 
         function handleApiError(error, title = 'An Error Occurred', showAlert = true) {
-            Swal.close(); // Close any loading Swal
+            Swal.close();
             console.error(`${title}:`, error);
             let message = 'An unknown error occurred. Please check the console or try again later.';
 
@@ -1739,7 +1746,7 @@
                      } else { title = title === 'An Error Occurred' ? "Authentication Failed" : title; showAlert = true; }
                  } else if (error.response.status === 403) { title = "Permission Denied"; message = error.response.data?.error || "Action forbidden."; }
                  else if (error.response.status === 404) { title = "Not Found"; message = error.response.data?.error || "Resource not found."; showAlert = !title.includes('Load Failed'); }
-                 else if (error.response.status === 409) { title = "Conflict"; } // e.g., Username/Email taken
+                 else if (error.response.status === 409) { title = "Conflict"; }
                  else if (error.response.status === 413) { title = "File Too Large"; message = error.response.data?.error || "The uploaded file exceeds the size limit." }
                  else if (error.response.status === 422) { title = "Validation Error"; message = error.response.data?.error || "Invalid data provided."; }
                  else if (error.response.status >= 500) { title = "Server Error"; message = "A problem occurred on the server. Please try again later."; }
