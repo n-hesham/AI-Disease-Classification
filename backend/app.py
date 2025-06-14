@@ -2,7 +2,7 @@
 from flask import Flask, render_template
 import os
 import pathlib
-from extensions import db, jwt, bcrypt, mail, cors, oauth, logger  # Assuming extensions.py initializes these
+from extensions import db, jwt, bcrypt, mail, cors, oauth, logger  
 from config import ActiveConfig
 
 BASE_DIR = pathlib.Path(__file__).parent.resolve()
